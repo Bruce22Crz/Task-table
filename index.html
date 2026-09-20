@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Стена дел</title>
+<title>Task table</title>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="favicon-32x32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -67,7 +67,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 }
 .brand{padding:0 8px 30px;color:var(--plank-ink);font-size:20px;font-weight:800;line-height:1.15;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
 .nav{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.nav li{position:relative}
 .nav a{
+  position:relative;z-index:1;
   display:flex;justify-content:space-between;align-items:center;gap:8px;
   width:100%;box-sizing:border-box;padding:11px 30px 11px 14px;border-radius:12px 0 0 12px;
   background:var(--plate);color:var(--plate-ink);text-decoration:none;font-size:15px;font-weight:600;line-height:1.2;
@@ -75,9 +77,14 @@ button,input,select,textarea{font:inherit;color:inherit}
   transition:transform .15s ease,background .15s ease,margin .15s ease,padding .15s ease;
 }
 .nav a:hover{background:rgba(255,255,255,.12);transform:translateX(2px)}
-.nav a[aria-current="page"]{
-  background:var(--plate-on);box-shadow:0 8px 18px rgba(108,99,255,.35);
-  margin-right:-18px;padding-right:38px;
+/* открытая вкладка выдвинута вправо; на её месте остаётся тёмная «выемка» */
+.nav a[aria-current="page"],.nav a[aria-current="page"]:hover{
+  background:var(--plate-on);transform:translateX(14px);
+}
+.nav li.cur::before{
+  content:"";position:absolute;inset:0;border-radius:12px 0 0 12px;
+  background:linear-gradient(90deg,rgba(0,0,0,.42),rgba(0,0,0,.16));
+  clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
 }
 .nav a:focus-visible{outline:none;box-shadow:inset 0 0 0 3px rgba(255,255,255,.75)}
 .count{min-width:22px;padding:0 6px;border-radius:11px;background:rgba(255,255,255,.18);font-size:12px;font-weight:700;line-height:20px;text-align:center}
@@ -113,6 +120,15 @@ h1{margin:0;font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.02e
 .tools input::placeholder{color:var(--paper-soft);opacity:1}
 .tools select{cursor:pointer;color-scheme:light}
 .tools select option{color:#222;background:#fff}
+.seg{display:inline-flex;height:36px;box-sizing:border-box;border:2px solid var(--paper-edge);border-radius:10px;overflow:hidden}
+.seg button{
+  padding:0 14px;border:0;background:transparent;color:var(--paper-ink);
+  font-size:14px;font-weight:600;line-height:1;cursor:pointer;
+}
+.seg button + button{border-left:2px solid var(--paper-edge)}
+.seg button:hover{background:rgba(108,99,255,.1)}
+.seg button[aria-pressed="true"]{background:var(--paper-ink);color:var(--paper-hi)}
+.seg button:focus-visible{outline-offset:-3px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
 .chip{
   padding:5px 14px;border:2px solid var(--paper-edge);border-radius:10px;
@@ -134,9 +150,10 @@ h1{margin:0;font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.02e
   transition:transform .2s ease;
 }
 .note-wrap:hover{transform:rotate(calc(var(--rot,0deg) * .4)) translateY(calc(var(--dy,0px) - 3px))}
-.is-archived{zoom:.55}
+/* архив: «мелкий» вид — стикеры вдвое меньше, при наведении вырастают */
+.is-mini{zoom:.55}
 .archive-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:22px 18px}
-.note-wrap.is-archived:hover{transform:scale(1.8) rotate(calc(var(--rot,0deg) * .4)) translateY(calc(var(--dy,0px) - 3px));z-index:20}
+.note-wrap.is-mini:hover,.note-wrap.is-mini:focus-within{transform:scale(1.8) rotate(calc(var(--rot,0deg) * .4)) translateY(calc(var(--dy,0px) - 3px));z-index:20}
 .note-wrap.just-added{animation:stick .55s cubic-bezier(.2,.9,.3,1.15)}
 @keyframes stick{
   from{transform:rotate(calc(var(--rot,0deg) - 7deg)) translateY(-18px) scale(1.1);opacity:0}
@@ -171,6 +188,33 @@ h1{margin:0;font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.02e
   background:rgba(0,0,0,.5);box-shadow:inset 0 1px 1px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.35);
 }
 .is-archived .note{filter:saturate(.7) brightness(.97)}
+
+/* загнутые уголки: угол срезан (в clip-path заметки), сверху лежит треугольник — изнанка бумаги */
+.fold{
+  position:absolute;z-index:2;width:var(--f);height:var(--f);pointer-events:none;
+  filter:drop-shadow(var(--fsx) var(--fsy) 2px rgba(0,0,0,.3));
+}
+.fold i{
+  position:absolute;inset:0;clip-path:var(--fclip);
+  background:
+    linear-gradient(var(--fdir),rgba(40,36,52,.46) 50%,rgba(40,36,52,.16) 68%,rgba(255,255,255,.34) 100%),
+    var(--tint,var(--t0));
+}
+.fold-bl{left:0;bottom:0;--fdir:to top right;--fclip:polygon(0 0,100% 100%,100% 0);--fsx:1.5px;--fsy:-1.5px}
+.fold-br{right:0;bottom:0;--fdir:to top left;--fclip:polygon(100% 0,0 100%,0 0);--fsx:-1.5px;--fsy:-1.5px}
+.fold-tl{left:0;top:0;--fdir:to bottom right;--fclip:polygon(0 100%,100% 0,100% 100%);--fsx:1.5px;--fsy:1.5px}
+.fold-tr{right:0;top:0;--fdir:to bottom left;--fclip:polygon(0 0,100% 100%,0 100%);--fsx:-1.5px;--fsy:1.5px}
+
+/* теги и кнопки не прячутся под нижними загибами */
+.wf-bl .tags,.wf-bl .arch-actions{margin-left:10px}
+.wf-br .tags,.wf-br .arch-actions{margin-right:10px}
+
+/* дырочки в бумаге */
+.punch{
+  position:absolute;z-index:1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(ellipse at 50% 30%,rgba(8,6,14,.9),rgba(20,16,30,.72) 70%);
+  box-shadow:inset 0 1px 1.5px rgba(0,0,0,.75),0 1px 0 rgba(255,255,255,.6);
+}
 
 .note-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-left:2px;font-size:13px;font-weight:600;line-height:18px;color:var(--ink);opacity:.78;min-height:18px}
 .note-top time{margin-left:auto}
@@ -286,9 +330,12 @@ dialog::backdrop{background:rgba(10,10,20,.55)}
   .brand{display:none}
   .nav{flex-direction:row;gap:8px}
   .nav a{width:auto;padding:8px 14px;transform:none!important}
+  .nav a[aria-current="page"]{transform:translateY(-3px)!important}
+  .nav li.cur::before{display:none}
   .stage{padding:16px 12px 32px}
   .sheet{min-height:70vh;padding:38px 24px 48px;border-radius:22px}
   .grid{grid-template-columns:minmax(0,1fr);gap:40px}
+  .grid.archive-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 12px}
   .tools input{width:130px}
   h1{font-size:26px}
 }
@@ -322,6 +369,10 @@ dialog::backdrop{background:rgba(10,10,20,.55)}
                   <option value="urgent">Срочные сверху</option>
                 </select>
               </label>
+              <div class="seg" id="viewSeg" role="group" aria-label="Размер стикеров" hidden>
+                <button type="button" data-v="full" aria-pressed="false" title="Стикеры обычного размера">Обычные</button>
+                <button type="button" data-v="mini" aria-pressed="true" title="Стикеры вдвое меньше, при наведении увеличиваются">Мелкие</button>
+              </div>
             </div>
           </div>
           <div class="chips" id="chips" role="group" aria-label="Фильтр по тегам"></div>
@@ -377,6 +428,7 @@ dialog::backdrop{background:rgba(10,10,20,.55)}
 
 /* ============ utils ============ */
 const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 const KEY = 'stena-del-v1';
 const URGENT = /срочн|важн|горит/i;
 const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -416,14 +468,68 @@ function normTag(s){
   return String(s).replace(/^#+/, '').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 24);
 }
 function hash(s){ let x = 0; for (let i=0;i<s.length;i++) x = (x*31 + s.charCodeAt(i)) >>> 0; return x; }
-function tornClip(id){
+function tornClip(id, folds){
+  folds = folds || {};
   const j = (seed, amp) => (((hash(seed + id) % 1000) / 1000) - .5) * 2 * amp;
+  const pt = (x, y) => (typeof x === 'number' ? x.toFixed(2) + '%' : x) + ' ' + (typeof y === 'number' ? y.toFixed(2) + '%' : y);
+  const px = n => n + 'px', fromEnd = n => `calc(100% - ${n}px)`;
   const pts = [];
-  [0,18,36,54,72,88,100].forEach((x,i) => pts.push([x, Math.max(0, 1.6 + j('t'+i,1.6))]));
-  [14,32,50,68,86].forEach((y,i) => pts.push([Math.min(100, 98.4 - j('r'+i,1.6)), y]));
-  [100,82,64,46,28,12,0].forEach((x,i) => pts.push([x, Math.min(100, 98.4 - j('b'+i,1.6))]));
-  [86,68,50,32,14].forEach((y,i) => pts.push([Math.max(0, 1.6 + j('l'+i,1.6)), y]));
-  return 'polygon(' + pts.map(p => p[0].toFixed(2)+'% '+p[1].toFixed(2)+'%').join(',') + ')';
+  // угол с загибом заменяется срезом по диагонали; порядок точек — по часовой стрелке
+  const corner = (name, normal, cut) => { const f = folds[name]; (f ? cut(f) : [normal]).forEach(p => pts.push(p)); };
+  [0,18,36,54,72,88,100].forEach((x,i) => {
+    const y = Math.max(0, 1.6 + j('t'+i,1.6));
+    if (i === 0) corner('tl', pt(x,y), f => [pt(0, px(f)), pt(px(f), 0)]);
+    else if (i === 6) corner('tr', pt(x,y), f => [pt(fromEnd(f), 0), pt('100%', px(f))]);
+    else pts.push(pt(x,y));
+  });
+  [14,32,50,68,86].forEach((y,i) => pts.push(pt(Math.min(100, 98.4 - j('r'+i,1.6)), y)));
+  [100,82,64,46,28,12,0].forEach((x,i) => {
+    const y = Math.min(100, 98.4 - j('b'+i,1.6));
+    if (i === 0) corner('br', pt(x,y), f => [pt('100%', fromEnd(f)), pt(fromEnd(f), '100%')]);
+    else if (i === 6) corner('bl', pt(x,y), f => [pt(px(f), '100%'), pt(0, fromEnd(f))]);
+    else pts.push(pt(x,y));
+  });
+  [86,68,50,32,14].forEach((y,i) => pts.push(pt(Math.max(0, 1.6 + j('l'+i,1.6)), y)));
+  return 'polygon(' + pts.join(',') + ')';
+}
+
+/* потёртости стикера: 1–2 загнутых уголка и иногда пара дырочек.
+   Зависят только от id заметки, поэтому не «прыгают» при перерисовке. */
+function rng(seed){
+  let a = hash(seed) || 1;
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function wear(id, pinx){
+  const r = rng(id + ':wear');
+  const corners = ['tl','tr','br','bl'];
+  for (let i = corners.length - 1; i > 0; i--){ const k = Math.floor(r() * (i + 1)); [corners[i], corners[k]] = [corners[k], corners[i]]; }
+  const folds = corners.slice(0, r() < .5 ? 1 : 2).map(c => ({c, f: Math.round(20 + r() * 7)}));
+  const q = r(), nh = q < .4 ? 0 : q < .75 ? 1 : 2;
+  const edges = ['l','r','t','b'];
+  for (let i = edges.length - 1; i > 0; i--){ const k = Math.floor(r() * (i + 1)); [edges[i], edges[k]] = [edges[k], edges[i]]; }
+  const holes = edges.slice(0, nh).map(e => {
+    const w = Math.round(6 + r() * 2), rot = Math.round((r() - .5) * 24);
+    let left, top;
+    if (e === 'l' || e === 'r'){
+      const inset = Math.round(11 + r());
+      left = e === 'l' ? inset + 'px' : `calc(100% - ${inset}px)`;
+      top = (26 + r() * 46).toFixed(1) + '%';
+    } else {
+      // по горизонтали обходим кнопку-гвоздик и углы с загибами
+      const lo = 13, hi = 87, gl = pinx - 15, gr = pinx + 15;
+      const spans = [[lo, gl], [gr, hi]].filter(([a,b]) => b - a > 4);
+      const [a, b] = spans[Math.floor(r() * spans.length)] || [lo, hi];
+      left = (a + r() * (b - a)).toFixed(1) + '%';
+      top = e === 't' ? '15px' : 'calc(100% - 10px)';
+    }
+    return {left, top, w, h: Math.round(w * .62), rot};
+  });
+  return {folds, holes};
 }
 function tagFg(hex){
   const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
@@ -494,7 +600,8 @@ const state = {
   data: {notes: [], extraTags: [], tagColors: {}, seeded: false},
   route: 'board', filter: [], q: '', sort: 'new',
   tagEditing: null, confirm: null, justAdded: null,
-  storageOk: true, dataMsg: '', exportText: ''
+  storageOk: true, dataMsg: '', exportText: '',
+  archiveView: (() => { try { return localStorage.getItem('stena-del-archive-view') === 'full' ? 'full' : 'mini'; } catch(e) { return 'mini'; } })()
 };
 let fbFirstLoad = true;
 function startSync(){
@@ -630,7 +737,7 @@ const NAV = [
 function renderNav(){
   const nb = notesFor('board').length, na = notesFor('archive').length;
   $('#nav').replaceChildren(...NAV.map(n =>
-    h('li', null, h('a', {href:'#'+n.id, 'aria-current': state.route === n.id ? 'page' : null},
+    h('li', {class: state.route === n.id ? 'cur' : null}, h('a', {href:'#'+n.id, 'aria-current': state.route === n.id ? 'page' : null},
       n.label,
       h('span', {class:'count'}, n.id === 'board' && nb ? String(nb) : n.id === 'archive' && na ? String(na) : ''))
     )));
@@ -649,6 +756,8 @@ function renderHead(){
   const r = state.route, list = r === 'board' || r === 'archive';
   $('#title').textContent = NAV.find(n => n.id === r).label;
   $('#tools').hidden = !list;
+  $('#viewSeg').hidden = r !== 'archive';
+  $$('#viewSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state.archiveView)));
   $('#warn').hidden = state.storageOk;
   renderMeta();
   const box = $('#chips'); box.replaceChildren();
@@ -697,11 +806,13 @@ function tagsRow(n, archived){
   return row;
 }
 
-function noteCard(n, archived){
+function noteCard(n, archived, mini){
   const s = n.style;
+  const wr = wear(n.id, s.pinx);
+  const foldMap = {}; wr.folds.forEach(f => { foldMap[f.c] = f.f; });
   const pinK = isUrgent(n) ? 0 : 1 + hash(n.id + 'p') % (PINS.length - 1);
   const tilt = (hash(n.id + 't') % 25) - 12;
-  const wrap = h('article', {class:'note-wrap' + (state.justAdded === n.id ? ' just-added' : '') + (archived ? ' is-archived' : '')});
+  const wrap = h('article', {class:'note-wrap' + (state.justAdded === n.id ? ' just-added' : '') + (archived ? ' is-archived' : '') + (archived && mini ? ' is-mini' : '')});
   wrap.style.setProperty('--rot', s.rot + 'deg');
   wrap.style.setProperty('--dy', s.dy + 'px');
   wrap.style.setProperty('--pinx', s.pinx + '%');
@@ -714,7 +825,7 @@ function noteCard(n, archived){
     pb.innerHTML = `<svg viewBox="0 0 44 58" aria-hidden="true"><use href="#pin${pinK}" width="44" height="58"/></svg>`;
     wrap.append(pb);
   }
-  wrap.append(h('div', {class:'note', style: 'clip-path:' + tornClip(n.id)},
+  wrap.append(h('div', {class:'note' + wr.folds.map(o => ' wf-' + o.c).join(''), style: 'clip-path:' + tornClip(n.id, foldMap)},
     h('div', {class:'note-top'},
       archived && h('span', null, 'в архиве с ' + fmtDate(n.archivedAt)),
       h('time', {datetime: new Date(n.created).toISOString()}, fmtDate(n.created))),
@@ -725,7 +836,10 @@ function noteCard(n, archived){
     tagsRow(n, archived),
     archived && h('div', {class:'arch-actions'},
       h('button', {class:'btn-mini', type:'button', onclick: () => restoreNote(n.id)}, 'Вернуть на доску'),
-      confirmBtn('del:'+n.id, 'Удалить', () => deleteNote(n.id)))
+      confirmBtn('del:'+n.id, 'Удалить', () => deleteNote(n.id))),
+    wr.holes.map(o => h('span', {class:'punch', 'aria-hidden':'true',
+      style:`left:${o.left};top:${o.top};width:${o.w}px;height:${o.h}px;transform:translate(-50%,-50%) rotate(${o.rot}deg)`})),
+    wr.folds.map(o => h('span', {class:'fold fold-' + o.c, 'aria-hidden':'true', style:`--f:${o.f}px`}, h('i')))
   ));
   return wrap;
 }
@@ -741,8 +855,9 @@ function renderList(view, archived){
       h('button', {class:'btn-mini', type:'button', style:'color:inherit;border-color:currentColor',
         onclick: () => { state.filter = []; state.q = ''; $('#q').value = ''; renderHead(); renderView(); }}, 'Сбросить фильтры')));
   }
-  const grid = h('div', {class:'grid' + (archived ? ' archive-grid' : '')});
-  list.forEach(n => grid.append(noteCard(n, archived)));
+  const mini = archived && state.archiveView === 'mini';
+  const grid = h('div', {class:'grid' + (mini ? ' archive-grid' : '')});
+  list.forEach(n => grid.append(noteCard(n, archived, mini)));
   if (!archived) grid.append(h('button', {class:'add-tile', type:'button', onclick: () => openEditor(null, state.filter)},
     h('span', {class:'plus', 'aria-hidden':'true'}, '+'), h('span', {class:'add-label'}, 'Новая заметка')));
   view.append(grid);
@@ -949,6 +1064,12 @@ dlg.addEventListener('click', e => { if (e.target === dlg) closeEditor(); });
 /* ============ tools ============ */
 $('#q').addEventListener('input', e => { state.q = e.target.value; renderView(); });
 $('#sort').addEventListener('change', e => { state.sort = e.target.value; renderView(); });
+$('#viewSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-v]'); if (!b || b.dataset.v === state.archiveView) return;
+  state.archiveView = b.dataset.v;
+  try { localStorage.setItem('stena-del-archive-view', state.archiveView); } catch(err) {}
+  renderHead(); renderView();
+});
 
 /* ============ start ============ */
 setPinSprite();
