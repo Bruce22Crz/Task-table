@@ -368,6 +368,7 @@ dialog::backdrop{background:rgba(10,10,20,.55)}
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
+  const boardRef = db.collection('stena-del').doc('board');
 </script>
 <script>
 (function(){
@@ -478,25 +479,41 @@ const state = {
   tagEditing: null, confirm: null, justAdded: null,
   storageOk: true, dataMsg: '', exportText: ''
 };
-function load(){
-  try{
-    const raw = localStorage.getItem(KEY);
-    if (raw){
-      const d = JSON.parse(raw);
-      if (d && Array.isArray(d.notes)){
-        state.data = {
-          notes: d.notes.map(cleanNote).filter(Boolean),
-          extraTags: Array.isArray(d.extraTags) ? [...new Set(d.extraTags.map(normTag).filter(Boolean))].slice(0,200) : [],
-          seeded: true
-        };
-        return;
-      }
+let fbFirstLoad = true;
+function startSync(){
+  boardRef.onSnapshot(docSnap => {
+    const d = docSnap.data();
+    if (d && Array.isArray(d.notes)){
+      state.data = {
+        notes: d.notes.map(cleanNote).filter(Boolean),
+        extraTags: Array.isArray(d.extraTags) ? [...new Set(d.extraTags.map(normTag).filter(Boolean))].slice(0,200) : [],
+        seeded: true
+      };
     }
-  }catch(e){ state.storageOk = false; }
+    state.storageOk = true;
+    if (fbFirstLoad){
+      fbFirstLoad = false;
+      if (!state.data.seeded) seed();
+      state.route = parseRoute();
+      renderAll();
+    } else {
+      renderAll();
+    }
+  }, err => {
+    console.error('Firestore sync error:', err);
+    state.storageOk = false;
+    if (fbFirstLoad){
+      fbFirstLoad = false;
+      state.route = parseRoute();
+      renderAll();
+    }
+  });
 }
 function save(){
-  try{ localStorage.setItem(KEY, JSON.stringify(state.data)); state.storageOk = true; }
-  catch(e){ state.storageOk = false; }
+  boardRef.set(state.data).then(
+    () => { state.storageOk = true; },
+    err => { console.error('Firestore save error:', err); state.storageOk = false; renderHead(); }
+  );
 }
 function seed(){
   const now = Date.now(), H = 3600e3;
@@ -913,10 +930,7 @@ $('#sort').addEventListener('change', e => { state.sort = e.target.value; render
 
 /* ============ start ============ */
 setPinSprite();
-load();
-if (!state.data.seeded) seed();
-state.route = parseRoute();
-renderAll();
+startSync();
 if (window.claude && typeof window.claude.use === 'function'){
   window.claude.use('downloads').then(d => { downloads = d; if (state.route === 'data') renderView(); }, () => {});
 }
