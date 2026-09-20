@@ -415,7 +415,14 @@ function normTag(s){
   return String(s).replace(/^#+/, '').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 24);
 }
 function hash(s){ let x = 0; for (let i=0;i<s.length;i++) x = (x*31 + s.charCodeAt(i)) >>> 0; return x; }
+function tagFg(hex){
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  const lum = (0.299*r+0.587*g+0.114*b)/255;
+  return lum > 0.6 ? '#20222b' : '#fff';
+}
 function tagStyle(t){
+  const custom = state.data.tagColors && state.data.tagColors[t];
+  if (custom) return `--tg-bg:${custom};--tg-fg:${tagFg(custom)}`;
   if (URGENT.test(t)) return '--tg-bg:hsl(2 78% 82%);--tg-fg:hsl(2 62% 28%)';
   const hue = hash(t) % 360;
   return `--tg-bg:hsl(${hue} 60% 84%);--tg-fg:hsl(${hue} 50% 26%)`;
@@ -474,7 +481,7 @@ function cleanNote(x){
   };
 }
 const state = {
-  data: {notes: [], extraTags: [], seeded: false},
+  data: {notes: [], extraTags: [], tagColors: {}, seeded: false},
   route: 'board', filter: [], q: '', sort: 'new',
   tagEditing: null, confirm: null, justAdded: null,
   storageOk: true, dataMsg: '', exportText: ''
@@ -487,6 +494,7 @@ function startSync(){
       state.data = {
         notes: d.notes.map(cleanNote).filter(Boolean),
         extraTags: Array.isArray(d.extraTags) ? [...new Set(d.extraTags.map(normTag).filter(Boolean))].slice(0,200) : [],
+        tagColors: (d.tagColors && typeof d.tagColors === 'object') ? d.tagColors : {},
         seeded: true
       };
     }
@@ -607,7 +615,7 @@ function visible(){
 /* ============ render ============ */
 const NAV = [
   {id:'board', label:'Доска'}, {id:'archive', label:'Архив'},
-  {id:'tags', label:'Теги'}, {id:'data', label:'Данные'}
+  {id:'tags', label:'Теги'}
 ];
 function renderNav(){
   const nb = notesFor('board').length, na = notesFor('archive').length;
@@ -768,11 +776,17 @@ function renderTags(view){
     const total = c.b + c.a;
     ul.append(h('li', null,
       h('span', {class:'tag', style: tagStyle(t)}, t),
+      h('input', {type:'color', class:'tag-color', title:'Цвет тега',
+        value: (state.data.tagColors[t] || '#6c63ff'),
+        onchange: e => { state.data.tagColors[t] = e.target.value; save(); renderView(); }}),
+      (state.data.tagColors[t]) && h('button', {class:'btn-mini', type:'button', title:'Сбросить цвет',
+        onclick: () => { delete state.data.tagColors[t]; save(); renderView(); }}, 'Сброс'),
       h('span', {class:'tag-count'}, total ? `на доске ${c.b}, в архиве ${c.a}` : 'ещё не используется'),
       total > 0 && h('button', {class:'btn-mini', type:'button', onclick: () => { state.filter = [t]; go('board'); }}, 'Показать на доске'),
       confirmBtn('tag:'+t, 'Удалить тег', () => {
         state.data.notes.forEach(n => { n.tags = n.tags.filter(x => x !== t); });
         state.data.extraTags = state.data.extraTags.filter(x => x !== t);
+        delete state.data.tagColors[t];
         state.filter = state.filter.filter(x => x !== t);
         save(); renderAll();
       })));
