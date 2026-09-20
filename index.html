@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Стена дел</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon-32x32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 :root{
   box-sizing:border-box;
@@ -59,8 +62,11 @@ button,input,select,textarea{font:inherit;color:inherit}
   height:calc(100vh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
   height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
   padding:28px 16px;
-  background:var(--plank);
-  box-shadow:2px 0 18px rgba(0,0,0,.18);
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 2px, transparent 2px 64px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 2px 4px, transparent 4px 64px),
+    var(--plank);
+  box-shadow:2px 0 18px rgba(0,0,0,.18), inset -50px 0 70px -50px rgba(0,0,0,.45);
 }
 .brand{padding:0 8px 30px;color:var(--plank-ink);font-size:20px;font-weight:800;line-height:1.15;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
 .nav{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -87,7 +93,14 @@ button,input,select,textarea{font:inherit;color:inherit}
   min-height:calc(100vh - 76px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
   min-height:calc(100dvh - 76px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
   padding:46px 56px 64px;
-  background:radial-gradient(ellipse at 50% 0%,var(--paper-hi) 0%,var(--paper) 55%,var(--paper-lo) 100%);
+  background:
+    radial-gradient(ellipse at 18% 12%, rgba(0,0,0,.05), transparent 40%),
+    radial-gradient(ellipse at 82% 22%, rgba(255,255,255,.05), transparent 35%),
+    radial-gradient(ellipse at 28% 72%, rgba(0,0,0,.04), transparent 45%),
+    radial-gradient(ellipse at 78% 88%, rgba(0,0,0,.05), transparent 40%),
+    repeating-linear-gradient(115deg, rgba(0,0,0,.025) 0 2px, transparent 2px 40px),
+    repeating-linear-gradient(25deg, rgba(255,255,255,.02) 0 1px, transparent 1px 60px),
+    radial-gradient(ellipse at 50% 0%,var(--paper-hi) 0%,var(--paper) 55%,var(--paper-lo) 100%);
 }
 
 /* ---------- sheet head ---------- */
@@ -295,6 +308,10 @@ dialog::backdrop{background:rgba(10,10,20,.55)}
 .note-wrap[data-fold="2"] .note::before{bottom:auto;top:0;border-width:0 0 var(--fold,22px) var(--fold,22px);border-color:transparent transparent rgba(0,0,0,.24) transparent}
 .note-wrap[data-fold="3"] .note{border-radius:3px 14px 3px 3px}
 .note-wrap[data-fold="3"] .note::before{right:auto;left:0;bottom:auto;top:0;border-width:0 var(--fold,22px) var(--fold,22px) 0;border-color:transparent transparent transparent rgba(0,0,0,.24)}
+.note-wrap[data-cut="0"] .note{clip-path:polygon(0 0,100% 0,100% 100%,var(--cut,14px) 100%,0 calc(100% - var(--cut,14px)))}
+.note-wrap[data-cut="1"] .note{clip-path:polygon(0 0,100% 0,100% calc(100% - var(--cut,14px)),calc(100% - var(--cut,14px)) 100%,0 100%)}
+.note-wrap[data-cut="2"] .note{clip-path:polygon(var(--cut,14px) 0,100% 0,100% 100%,0 100%,0 var(--cut,14px))}
+.note-wrap[data-cut="3"] .note{clip-path:polygon(0 0,calc(100% - var(--cut,14px)) 0,100% var(--cut,14px),100% 100%,0 100%)}
 </style>
 </head>
 <body>
@@ -693,9 +710,13 @@ function noteCard(n, archived){
   const tilt = (hash(n.id + 't') % 25) - 12;
   const foldK = hash(n.id + 'f') % 4;
   const foldSize = 16 + hash(n.id + 'fs') % 13; // 16–28px
+  const cutK = hash(n.id + 'c') % 4;
+  const cutSize = 8 + hash(n.id + 'cs') % 13; // 8–20px
   const wrap = h('article', {class:'note-wrap' + (state.justAdded === n.id ? ' just-added' : '') + (archived ? ' is-archived' : '')});
   wrap.dataset.fold = foldK;
+  wrap.dataset.cut = cutK;
   wrap.style.setProperty('--fold', foldSize + 'px');
+  wrap.style.setProperty('--cut', cutSize + 'px');
   wrap.style.setProperty('--rot', s.rot + 'deg');
   wrap.style.setProperty('--dy', s.dy + 'px');
   wrap.style.setProperty('--pinx', s.pinx + '%');
