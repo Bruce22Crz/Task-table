@@ -355,6 +355,20 @@ dialog::backdrop{background:rgba(10,10,20,.55)}
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBf5G5URD6rMkk9SlM7s1Nd7JlhQKAhzzQ",
+    authDomain: "task-table-d5b0b.firebaseapp.com",
+    projectId: "task-table-d5b0b",
+    storageBucket: "task-table-d5b0b.firebasestorage.app",
+    messagingSenderId: "286009015777",
+    appId: "1:286009015777:web:2277f6daa5c9a70a70a6a0"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
 <script>
 (function(){
 'use strict';
