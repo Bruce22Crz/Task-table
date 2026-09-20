@@ -134,6 +134,9 @@ h1{margin:0;font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.02e
   transition:transform .2s ease;
 }
 .note-wrap:hover{transform:rotate(calc(var(--rot,0deg) * .4)) translateY(calc(var(--dy,0px) - 3px))}
+.is-archived{zoom:.55}
+.archive-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:22px 18px}
+.note-wrap.is-archived:hover{transform:scale(1.8) rotate(calc(var(--rot,0deg) * .4)) translateY(calc(var(--dy,0px) - 3px));z-index:20}
 .note-wrap.just-added{animation:stick .55s cubic-bezier(.2,.9,.3,1.15)}
 @keyframes stick{
   from{transform:rotate(calc(var(--rot,0deg) - 7deg)) translateY(-18px) scale(1.1);opacity:0}
@@ -176,6 +179,7 @@ h1{margin:0;font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.02e
   background:transparent;
   font-size:17px;font-weight:500;line-height:24px;color:var(--ink);
 }
+.desc.desc-static{cursor:default}
 .desc-text{display:-webkit-box;-webkit-line-clamp:4;line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere}
 .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:12px;max-height:68px;overflow:hidden}
 .tag{
@@ -714,8 +718,10 @@ function noteCard(n, archived){
     h('div', {class:'note-top'},
       archived && h('span', null, 'в архиве с ' + fmtDate(n.archivedAt)),
       h('time', {datetime: new Date(n.created).toISOString()}, fmtDate(n.created))),
-    h('button', {class:'desc', type:'button', title:'Изменить заметку', onclick: () => openEditor(n.id)},
-      h('span', {class:'desc-text'}, n.text)),
+    archived
+      ? h('div', {class:'desc desc-static', title:'В архиве — только просмотр'}, h('span', {class:'desc-text'}, n.text))
+      : h('button', {class:'desc', type:'button', title:'Изменить заметку', onclick: () => openEditor(n.id)},
+          h('span', {class:'desc-text'}, n.text)),
     tagsRow(n, archived),
     archived && h('div', {class:'arch-actions'},
       h('button', {class:'btn-mini', type:'button', onclick: () => restoreNote(n.id)}, 'Вернуть на доску'),
@@ -735,7 +741,7 @@ function renderList(view, archived){
       h('button', {class:'btn-mini', type:'button', style:'color:inherit;border-color:currentColor',
         onclick: () => { state.filter = []; state.q = ''; $('#q').value = ''; renderHead(); renderView(); }}, 'Сбросить фильтры')));
   }
-  const grid = h('div', {class:'grid'});
+  const grid = h('div', {class:'grid' + (archived ? ' archive-grid' : '')});
   list.forEach(n => grid.append(noteCard(n, archived)));
   if (!archived) grid.append(h('button', {class:'add-tile', type:'button', onclick: () => openEditor(null, state.filter)},
     h('span', {class:'plus', 'aria-hidden':'true'}, '+'), h('span', {class:'add-label'}, 'Новая заметка')));
